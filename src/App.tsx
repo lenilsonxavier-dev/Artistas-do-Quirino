@@ -38,10 +38,14 @@ export default function App() {
 
   // --- PERSISTÊNCIA E INICIALIZAÇÃO DE SEGURANÇA ---
   useEffect(() => {
-    // Verifica se o aluno já fez login anteriormente neste dispositivo
-    const authed = localStorage.getItem("quirino_auth");
-    if (authed === "true") {
-      setIsAuthorized(true);
+    try {
+      // Verifica se o aluno já fez login anteriormente neste dispositivo
+      const authed = localStorage.getItem("quirino_auth");
+      if (authed === "true") {
+        setIsAuthorized(true);
+      }
+    } catch (e) {
+      console.warn("localStorage não está acessível:", e);
     }
   }, []);
 
@@ -66,7 +70,11 @@ export default function App() {
   const handleLogin = () => {
     if (password === "246") {
       setIsAuthorized(true);
-      localStorage.setItem("quirino_auth", "true");
+      try {
+        localStorage.setItem("quirino_auth", "true");
+      } catch (e) {
+        console.warn("Não foi possível salvar no localStorage:", e);
+      }
       setLoginError("");
     } else {
       setLoginError("Senha incorreta!");
@@ -92,7 +100,11 @@ export default function App() {
       background: "#fff9e6"
     }).then((result) => {
       if (result.isConfirmed) {
-        localStorage.removeItem("quirino_auth");
+        try {
+          localStorage.removeItem("quirino_auth");
+        } catch (e) {
+          console.warn("Não foi possível remover do localStorage:", e);
+        }
         setIsAuthorized(false);
         setPassword("");
         setActiveScreen("splash");
@@ -319,6 +331,7 @@ export default function App() {
             }`}
           >
             <source src="abertura.mp4" type="video/mp4" />
+            <source src="https://raw.githubusercontent.com/lenilsonxavier-dev/arteeducar/main/abertura.mp4" type="video/mp4" />
           </video>
 
           {/* Fallback de Carregamento e Botão de Entrada */}
