@@ -1,0 +1,6 @@
+{
+  "name": "Pequenos Artistas do Quirino",
+  "description": "Espaço virtual de arte e aprendizado para os alunos do Colégio Quirino.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
