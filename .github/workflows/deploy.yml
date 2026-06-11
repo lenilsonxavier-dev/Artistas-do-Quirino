@@ -1,0 +1,54 @@
+# Workflow para compilar e implantar o site automaticamente no GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main", "master"] # Executa no push para a branch main ou master
+
+  # Permite executar este fluxo de trabalho manualmente a partir da aba Actions
+  workflow_dispatch:
+
+# Define as permissões do GITHUB_TOKEN para permitir a implantação no GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Permite apenas uma implantação simultânea, cancelando execuções anteriores se necessário
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Código-Fonte
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar Dependências
+        run: npm install
+
+      - name: Compilar Projeto (Vite Build)
+        run: npm run build
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload dos Arquivos Compilados (Artifact)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist' # Sobe a pasta dist compilada pelo Vite
+
+      - name: Implantar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
