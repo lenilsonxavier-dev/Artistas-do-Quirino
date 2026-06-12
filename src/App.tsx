@@ -634,24 +634,22 @@ export default function App() {
 
       {/* ========== TELA WEBVIEW PORTINARI (LAZY LOAD IFRAME) ========== */}
       {isAuthorized && activeScreen === "webviewScreen" && (
-        <div id="webviewScreen" className="fixed inset-0 flex flex-col bg-[#001858] z-[9990]">
-          <div className="h-16 flex items-center px-6 justify-between bg-[#001858] border-b-2 border-[#ffde59]">
-            <button 
-              className="btn-voltar-menu btn-voltar-amarelo hover:scale-102 active:scale-98 transition flex items-center gap-2 px-5 py-2 rounded-full font-bold cursor-pointer"
-              onClick={fecharWebView}
-            >
-              <ArrowLeft size={16} /> Voltar ao Menu
-            </button>
-            <span className="text-white font-bold">Portal Candinhoportinari</span>
-            <div className="w-10 h-10" /> {/* Espaçador */}
-          </div>
+        <div id="webviewScreen" className="fixed inset-0 bg-white z-[9990]">
+          {/* Botão flutuante redondo para voltar, sem ocupar espaço de barra */}
+          <button 
+            className="absolute top-4 left-4 z-50 bg-[#ffde59] hover:bg-[#ffe066] active:scale-95 text-[#001858] p-3 rounded-full font-bold shadow-lg transition flex items-center justify-center cursor-pointer border-2 border-white"
+            onClick={fecharWebView}
+            title="Voltar ao Menu"
+          >
+            <ArrowLeft size={22} />
+          </button>
 
-          <div className="flex-grow w-full bg-white relative">
+          <div className="absolute inset-0 w-full h-full bg-white">
             {activeScreen === "webviewScreen" && activeWebViewType === "candinhoportinari" && (
               <iframe 
                 id="webviewFrame" 
                 src="https://candinho-20.vercel.app/" 
-                className="absolute inset-0 w-full h-full border-none"
+                className="w-full h-full border-none"
               />
             )}
           </div>
