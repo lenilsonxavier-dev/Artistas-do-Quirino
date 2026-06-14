@@ -167,15 +167,22 @@ export default function App() {
       curAudioRef.current.currentTime = 0;
     }
     
-    curAudioRef.current = new Audio(`sons/${nomeArquivo}.mp3`);
+    const audioUrl = `https://cdn.jsdelivr.net/gh/lenilsonxavier-dev/arteeducar@main/sons/${nomeArquivo}.mp3`;
+    curAudioRef.current = new Audio(audioUrl);
     curAudioRef.current.play().catch((e) => {
-      console.log("Nota: O arquivo ou reprodutor de som encontrou uma restrição:", e);
+      console.log("Nota: Tentando áudio local se o CDN falhar...", e);
+      // fallback local
+      curAudioRef.current = new Audio(`sons/${nomeArquivo}.mp3`);
+      curAudioRef.current.play().catch((err) => {
+        console.log("Falha ao reproduzir áudio:", err);
+      });
     });
   };
 
   const alternarSomMuseu = () => {
     if (!museuAudioRef.current) {
-      museuAudioRef.current = new Audio("sons/museu.mp3");
+      const audioUrl = "https://cdn.jsdelivr.net/gh/lenilsonxavier-dev/arteeducar@main/sons/museu.mp3";
+      museuAudioRef.current = new Audio(audioUrl);
       museuAudioRef.current.loop = true;
     }
 
@@ -185,7 +192,12 @@ export default function App() {
           setIsMuseuAudioPlaying(true);
         })
         .catch((e) => {
-          console.log("Erro ao tocar áudio do museu:", e);
+          console.log("Erro no áudio da Web, tentando local...", e);
+          museuAudioRef.current = new Audio("sons/museu.mp3");
+          museuAudioRef.current.loop = true;
+          museuAudioRef.current.play()
+            .then(() => setIsMuseuAudioPlaying(true))
+            .catch(() => setIsMuseuAudioPlaying(false));
         });
     } else {
       museuAudioRef.current.pause();
@@ -607,25 +619,25 @@ export default function App() {
         </div>
       )}
 
-      {/* ========== TELA JOGO (LAZY LOAD IFRAME) ========== */}
+      {/* ========== TELA JOGO (LAZY LOAD IFRAME DETALHADO E FULLSCREEN PARA CELULAR) ========== */}
       {isAuthorized && activeScreen === "telaJogo" && (
-        <div id="telaJogo" className="fixed inset-0 flex flex-col bg-[#0a1f3b] p-4 text-white z-[9999]">
-          <div className="flex justify-between items-center mb-3">
-            <button 
-              className="botao-voltar-jogo hover:brightness-95 flex items-center gap-2 cursor-pointer" 
-              onClick={fecharJogo}
-            >
-              <ArrowLeft size={16} /> Voltar aos Jogos
-            </button>
-            <span className="text-[#f4d35e] font-bold tracking-wide">Pequenos Artistas do Quirino 🕹️</span>
-          </div>
+        <div id="telaJogo" className="fixed inset-0 bg-black z-[9999]">
+          {/* Botão flutuante redondo para voltar super otimizado para celulares */}
+          <button 
+            className="absolute top-4 left-4 z-50 bg-[#ffde59] hover:bg-[#ffe066] active:scale-95 text-[#001858] p-3 rounded-full font-bold shadow-lg transition flex items-center justify-center cursor-pointer border-2 border-white"
+            onClick={fecharJogo}
+            title="Voltar aos Jogos"
+          >
+            <ArrowLeft size={22} />
+          </button>
 
-          <div className="flex-grow w-full rounded-2xl overflow-hidden border-4 border-white bg-black relative shadow-2xl">
+          <div className="absolute inset-0 w-full h-full bg-black">
             {activeJogoUrl && (
               <iframe 
                 id="frameJogo" 
                 src={activeJogoUrl}
-                className="absolute inset-0 w-full h-full border-none"
+                className="w-full h-full border-none"
+                allow="autoplay; fullscreen; clipboard-write"
               />
             )}
           </div>
