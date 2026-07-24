@@ -12,10 +12,12 @@ import {
   Shuffle, 
   Play, 
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  ExternalLink
 } from "lucide-react";
 import { desafios, Desafio } from "./data/desafios";
 import { jogosOnlineLista, Jogo } from "./data/jogos";
+import { JogoForca } from "./components/JogoForca";
 
 export default function App() {
   // --- ESTADOS ---
@@ -23,10 +25,11 @@ export default function App() {
   const [password, setPassword] = useState<string>("");
   const [loginError, setLoginError] = useState<string>("");
   const [activeScreen, setActiveScreen] = useState<string>("splash"); // "splash" | "home" | "museu" | "mural" | "desafiosArte" | "jogosOnline" | "telaJogo" | "webviewScreen"
+  const [abaMuseu, setAbaMuseu] = useState<"emaze" | "arts">("emaze");
   
   // Controle de áudio e vídeo
   const [isPlayingVideo, setIsPlayingVideo] = useState<boolean>(false);
-  const [isMuseuAudioPlaying, setIsMuseuAudioPlaying] = useState<boolean>(false);
+  const [somExposicaoAtivo, setSomExposicaoAtivo] = useState<"none" | "emaze" | "arts">("none");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeJogoUrl, setActiveJogoUrl] = useState<string>("");
   const [activeWebViewType, setActiveWebViewType] = useState<string>("");
@@ -34,6 +37,7 @@ export default function App() {
   // Refs de áudio e vídeo para controle preciso e seguro
   const curAudioRef = useRef<HTMLAudioElement | null>(null);
   const museuAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ambientOscRef = useRef<{ stop: () => void } | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // --- PERSISTÊNCIA E INICIALIZAÇÃO DE SEGURANÇA ---
@@ -179,38 +183,88 @@ export default function App() {
     });
   };
 
-  const alternarSomMuseu = () => {
-    if (!museuAudioRef.current) {
-      const audioUrl = "https://cdn.jsdelivr.net/gh/lenilsonxavier-dev/arteeducar@main/sons/museu.mp3";
-      museuAudioRef.current = new Audio(audioUrl);
-      museuAudioRef.current.loop = true;
-    }
-
-    if (museuAudioRef.current.paused) {
-      museuAudioRef.current.play()
-        .then(() => {
-          setIsMuseuAudioPlaying(true);
-        })
-        .catch((e) => {
-          console.log("Erro no áudio da Web, tentando local...", e);
-          museuAudioRef.current = new Audio("sons/museu.mp3");
-          museuAudioRef.current.loop = true;
-          museuAudioRef.current.play()
-            .then(() => setIsMuseuAudioPlaying(true))
-            .catch(() => setIsMuseuAudioPlaying(false));
-        });
-    } else {
-      museuAudioRef.current.pause();
-      setIsMuseuAudioPlaying(false);
-    }
-  };
-
   const pararSomMuseu = () => {
     if (museuAudioRef.current) {
       museuAudioRef.current.pause();
       museuAudioRef.current.currentTime = 0;
     }
-    setIsMuseuAudioPlaying(false);
+    if (ambientOscRef.current) {
+      ambientOscRef.current.stop();
+      ambientOscRef.current = null;
+    }
+    setSomExposicaoAtivo("none");
+  };
+
+  const alternarSomExposicao = (tipo: "emaze" | "arts") => {
+    if (somExposicaoAtivo === tipo) {
+      pararSomMuseu();
+      return;
+    }
+
+    pararSomMuseu();
+
+    const nomeArquivo = tipo === "emaze" ? "museu" : "floresta";
+    const audioUrl = `https://cdn.jsdelivr.net/gh/lenilsonxavier-dev/arteeducar@main/sons/${nomeArquivo}.mp3`;
+
+    museuAudioRef.current = new Audio(audioUrl);
+    museuAudioRef.current.loop = true;
+
+    museuAudioRef.current.play()
+      .then(() => {
+        setSomExposicaoAtivo(tipo);
+      })
+      .catch((e) => {
+        console.log(`Tentando áudio local ou sintetizador para ${tipo}...`, e);
+        museuAudioRef.current = new Audio(`sons/${nomeArquivo}.mp3`);
+        museuAudioRef.current.loop = true;
+        museuAudioRef.current.play()
+          .then(() => setSomExposicaoAtivo(tipo))
+          .catch(() => {
+            try {
+              const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+              if (AudioCtx) {
+                const ctx = new AudioCtx();
+                let isPlaying = true;
+
+                const playChordLoop = () => {
+                  if (!isPlaying) return;
+                  const now = ctx.currentTime;
+                  const notes = tipo === "emaze"
+                    ? [261.63, 329.63, 392.00, 523.25, 440.00] // Portinari: C-Major
+                    : [293.66, 369.99, 440.00, 554.37, 659.25, 587.33]; // Floresta: Pentatônica Natureza
+
+                  notes.forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = tipo === "arts" ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.45);
+                    gain.gain.setValueAtTime(0.04, now + idx * 0.45);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.45 + 2.8);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + idx * 0.45);
+                    osc.stop(now + idx * 0.45 + 2.8);
+                  });
+                };
+
+                playChordLoop();
+                const interval = setInterval(playChordLoop, 3500);
+
+                ambientOscRef.current = {
+                  stop: () => {
+                    isPlaying = false;
+                    clearInterval(interval);
+                    ctx.close().catch(() => {});
+                  }
+                };
+                setSomExposicaoAtivo(tipo);
+              }
+            } catch (errSynth) {
+              console.log("Erro no sintetizador:", errSynth);
+              setSomExposicaoAtivo("none");
+            }
+          });
+      });
   };
 
   // --- SEÇÃO DE DESAFIOS ---
@@ -264,9 +318,13 @@ export default function App() {
     setActiveScreen("jogosOnline");
   };
 
-  const abrirJogo = (link: string) => {
-    setActiveJogoUrl(link);
-    setActiveScreen("telaJogo");
+  const abrirJogo = (jogo: Jogo) => {
+    if (jogo.isNative && jogo.id === "forca") {
+      setActiveScreen("jogoForca");
+    } else {
+      setActiveJogoUrl(jogo.link);
+      setActiveScreen("telaJogo");
+    }
   };
 
   const fecharJogo = () => {
@@ -443,43 +501,127 @@ export default function App() {
             <div className="bg-[#7fc9ff] border-3 border-white p-5 rounded-[40px] flex flex-wrap items-center justify-between gap-4">
               <button 
                 className="btn-voltar-menu btn-voltar-azul hover:scale-102 active:scale-98 transition flex items-center gap-2 font-bold px-5 py-2.5 rounded-full text-white bg-[#3c8fe9] shadow-[0_5px_0_#2a63a4] border border-[#b8dcff] cursor-pointer"
-                onClick={() => setActiveScreen("home")}
+                onClick={() => {
+                  pararSomMuseu();
+                  setActiveScreen("home");
+                }}
               >
                 <ArrowLeft size={18} /> Voltar
               </button>
               
               <div className="text-center flex-grow md:text-right pr-2">
                 <h2 className="text-2xl md:text-3xl font-extrabold text-white leading-tight">
-                  ✨ As infâncias de <span className="bg-[#ffdd77] text-[#2b5f8a] border-2 border-white px-3 py-0.5 rounded-full inline-block mt-1 md:mt-0 font-bold">Cândido Portinari</span>
+                  🏛️ Museu Virtual: <span className="bg-[#ffdd77] text-[#2b5f8a] border-2 border-white px-3 py-0.5 rounded-full inline-block mt-1 md:mt-0 font-bold">{abaMuseu === "emaze" ? "Cândido Portinari" : "Futuro Ancestral"}</span>
                 </h2>
               </div>
+            </div>
 
-              <button 
-                id="btnSomMuseu" 
-                onClick={alternarSomMuseu}
-                className="px-5 py-3 rounded-2xl border-2 border-white font-bold bg-[#72ddf7] hover:bg-[#55cde9] text-[#001858] transition flex items-center gap-2 cursor-pointer shadow-md"
+            {/* SELETOR DE EXPOSIÇÃO (ABAS) */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={() => setAbaMuseu("emaze")}
+                className={`px-5 py-3 rounded-2xl border-2 border-white font-extrabold text-sm md:text-base transition cursor-pointer flex items-center gap-2 shadow-md ${
+                  abaMuseu === "emaze"
+                    ? "bg-[#ffde59] text-[#001858] scale-102 shadow-amber-500/30"
+                    : "bg-[#001858]/10 hover:bg-[#001858]/20 text-[#001858]"
+                }`}
               >
-                {isMuseuAudioPlaying ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                {isMuseuAudioPlaying ? "🔇 Desligar som do museu" : "🔊 Iniciar som do museu"}
+                🎨 As Infâncias de Cândido Portinari
+              </button>
+
+              <button
+                onClick={() => setAbaMuseu("arts")}
+                className={`px-5 py-3 rounded-2xl border-2 border-white font-extrabold text-sm md:text-base transition cursor-pointer flex items-center gap-2 shadow-md ${
+                  abaMuseu === "arts"
+                    ? "bg-[#ffde59] text-[#001858] scale-102 shadow-amber-500/30"
+                    : "bg-[#001858]/10 hover:bg-[#001858]/20 text-[#001858]"
+                }`}
+              >
+                🌿 Futuro Ancestral (Histórias da Floresta)
               </button>
             </div>
 
             <div className="bg-[#2b6c9e] border-4 md:border-5 border-white p-4 rounded-[40px] shadow-inner">
-              <div className="relative w-full h-[55vh] md:h-[70vh] rounded-[30px] overflow-hidden bg-[#0a1f3b] flex items-center justify-center border-2 border-white/15">
-                {/* O iframe só carrega se activeScreen for museu - Performance extrema de banda de internet! */}
-                <iframe 
-                  src="https://app.emaze.com/@ALFTCCRLT/esta-obra-de-cndido-portinari-chama-se-menino-com" 
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full border-none"
-                />
-              </div>
+              {abaMuseu === "emaze" ? (
+                <>
+                  {/* BARRA DE ÁUDIO EXCLUSIVA: PORTINARI */}
+                  <div className="mb-3 bg-[#133c5e] border-2 border-white/20 p-3 rounded-[24px] flex flex-wrap items-center justify-between gap-3 text-white shadow-md">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🎨</span>
+                      <span className="font-extrabold text-sm md:text-base">
+                        Exposição Cândido Portinari
+                      </span>
+                    </div>
 
-              <div className="mt-5 bg-[#fee5b1] border-2 border-white p-4 rounded-[30px] flex items-center justify-center gap-4 text-[#154256] font-bold text-lg md:text-xl shadow-md">
-                <span className="text-3xl">🎨</span>
-                <p className="italic text-center">
-                  “Na minha infância, os meninos brincavam de pião, de bola, de roda. Eu pintei isso tudo.” — Portinari
-                </p>
-              </div>
+                    <button
+                      onClick={() => alternarSomExposicao("emaze")}
+                      className={`px-4 py-2.5 rounded-xl border-2 border-white font-extrabold text-sm flex items-center gap-2 shadow-md transition cursor-pointer ${
+                        somExposicaoAtivo === "emaze"
+                          ? "bg-[#ffde59] text-[#001858] animate-pulse"
+                          : "bg-[#72ddf7] hover:bg-[#55cde9] text-[#001858]"
+                      }`}
+                    >
+                      {somExposicaoAtivo === "emaze" ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                      {somExposicaoAtivo === "emaze" ? "🔇 Pausar Trilha (Infância & Brincadeiras)" : "🔊 Tocar Trilha (Infância & Brincadeiras)"}
+                    </button>
+                  </div>
+
+                  <div className="relative w-full h-[55vh] md:h-[70vh] rounded-[30px] overflow-hidden bg-[#0a1f3b] flex items-center justify-center border-2 border-white/15">
+                    <iframe 
+                      src="https://app.emaze.com/@ALFTCCRLT/esta-obra-de-cndido-portinari-chama-se-menino-com" 
+                      allowFullScreen
+                      className="absolute inset-0 w-full h-full border-none"
+                    />
+                  </div>
+
+                  <div className="mt-5 bg-[#fee5b1] border-2 border-white p-4 rounded-[30px] flex items-center justify-center gap-4 text-[#154256] font-bold text-lg md:text-xl shadow-md">
+                    <span className="text-3xl">🎨</span>
+                    <p className="italic text-center">
+                      “Na minha infância, os meninos brincavam de pião, de bola, de roda. Eu pintei isso tudo.” — Portinari
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* BARRA DE ÁUDIO EXCLUSIVA: FUTURO ANCESTRAL */}
+                  <div className="mb-3 bg-[#133c5e] border-2 border-white/20 p-3 rounded-[24px] flex flex-wrap items-center justify-between gap-3 text-white shadow-md">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🌿</span>
+                      <span className="font-extrabold text-sm md:text-base">
+                        Exposição Futuro Ancestral
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => alternarSomExposicao("arts")}
+                      className={`px-4 py-2.5 rounded-xl border-2 border-white font-extrabold text-sm flex items-center gap-2 shadow-md transition cursor-pointer ${
+                        somExposicaoAtivo === "arts"
+                          ? "bg-[#ffde59] text-[#001858] animate-pulse"
+                          : "bg-[#72ddf7] hover:bg-[#55cde9] text-[#001858]"
+                      }`}
+                    >
+                      {somExposicaoAtivo === "arts" ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                      {somExposicaoAtivo === "arts" ? "🔇 Pausar Sons da Floresta" : "🔊 Tocar Sons da Floresta"}
+                    </button>
+                  </div>
+
+                  <div className="relative w-full h-[55vh] md:h-[70vh] rounded-[30px] overflow-hidden bg-[#0a1f3b] flex items-center justify-center border-2 border-white/15">
+                    <iframe 
+                      src="https://app.emaze.com/@ALCRTOFLO/histrias-da-floresta?autoplay&hidebuttons" 
+                      allowFullScreen
+                      allow="autoplay; fullscreen; clipboard-write"
+                      className="absolute inset-0 w-full h-full border-none"
+                    />
+                  </div>
+
+                  <div className="mt-5 bg-[#fee5b1] border-2 border-white p-4 rounded-[30px] flex items-center justify-center gap-4 text-[#154256] font-bold text-base md:text-lg shadow-md">
+                    <span className="text-3xl">🌿</span>
+                    <p className="text-center font-semibold italic">
+                      “Histórias da Floresta & Futuro Ancestral — Arte, natureza e ancestralidade em harmonia.”
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
           </div>
@@ -603,7 +745,7 @@ export default function App() {
               <button 
                 key={jogo.nome}
                 className="botao-app hover:brightness-95 hover:scale-101 flex items-center justify-center gap-2"
-                onClick={() => abrirJogo(jogo.link)}
+                onClick={() => abrirJogo(jogo)}
               >
                 <Gamepad2 size={20} /> 🎮 {jogo.nome}
               </button>
@@ -617,6 +759,11 @@ export default function App() {
             <ArrowLeft size={18} /> Voltar ao Menu
           </button>
         </div>
+      )}
+
+      {/* ========== TELA JOGO DA FORCA NATIVO ========== */}
+      {isAuthorized && activeScreen === "jogoForca" && (
+        <JogoForca onVoltar={() => setActiveScreen("jogosOnline")} />
       )}
 
       {/* ========== TELA JOGO (LAZY LOAD IFRAME DETALHADO E FULLSCREEN PARA CELULAR) ========== */}
