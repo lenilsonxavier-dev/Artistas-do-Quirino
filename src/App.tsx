@@ -13,7 +13,8 @@ import {
   Play, 
   CheckCircle,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Music
 } from "lucide-react";
 import { desafios, Desafio } from "./data/desafios";
 import { jogosOnlineLista, Jogo } from "./data/jogos";
@@ -29,7 +30,7 @@ export default function App() {
   
   // Controle de áudio e vídeo
   const [isPlayingVideo, setIsPlayingVideo] = useState<boolean>(false);
-  const [somExposicaoAtivo, setSomExposicaoAtivo] = useState<"none" | "emaze" | "arts">("none");
+  const [somExposicaoAtivo, setSomExposicaoAtivo] = useState<"none" | "emaze">("none");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeJogoUrl, setActiveJogoUrl] = useState<string>("");
   const [activeWebViewType, setActiveWebViewType] = useState<string>("");
@@ -195,30 +196,29 @@ export default function App() {
     setSomExposicaoAtivo("none");
   };
 
-  const alternarSomExposicao = (tipo: "emaze" | "arts") => {
-    if (somExposicaoAtivo === tipo) {
+  const alternarSomPortinari = () => {
+    if (somExposicaoAtivo === "emaze") {
       pararSomMuseu();
       return;
     }
 
     pararSomMuseu();
 
-    const nomeArquivo = tipo === "emaze" ? "museu" : "floresta";
-    const audioUrl = `https://cdn.jsdelivr.net/gh/lenilsonxavier-dev/arteeducar@main/sons/${nomeArquivo}.mp3`;
+    const audioUrl = "https://cdn.jsdelivr.net/gh/lenilsonxavier-dev/arteeducar@main/sons/museu.mp3";
 
     museuAudioRef.current = new Audio(audioUrl);
     museuAudioRef.current.loop = true;
 
     museuAudioRef.current.play()
       .then(() => {
-        setSomExposicaoAtivo(tipo);
+        setSomExposicaoAtivo("emaze");
       })
       .catch((e) => {
-        console.log(`Tentando áudio local ou sintetizador para ${tipo}...`, e);
-        museuAudioRef.current = new Audio(`sons/${nomeArquivo}.mp3`);
+        console.log("Tentando áudio local ou sintetizador para Portinari...", e);
+        museuAudioRef.current = new Audio("sons/museu.mp3");
         museuAudioRef.current.loop = true;
         museuAudioRef.current.play()
-          .then(() => setSomExposicaoAtivo(tipo))
+          .then(() => setSomExposicaoAtivo("emaze"))
           .catch(() => {
             try {
               const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -229,14 +229,12 @@ export default function App() {
                 const playChordLoop = () => {
                   if (!isPlaying) return;
                   const now = ctx.currentTime;
-                  const notes = tipo === "emaze"
-                    ? [261.63, 329.63, 392.00, 523.25, 440.00] // Portinari: C-Major
-                    : [293.66, 369.99, 440.00, 554.37, 659.25, 587.33]; // Floresta: Pentatônica Natureza
+                  const notes = [261.63, 329.63, 392.00, 523.25, 440.00];
 
                   notes.forEach((freq, idx) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
-                    osc.type = tipo === "arts" ? 'triangle' : 'sine';
+                    osc.type = 'sine';
                     osc.frequency.setValueAtTime(freq, now + idx * 0.45);
                     gain.gain.setValueAtTime(0.04, now + idx * 0.45);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.45 + 2.8);
@@ -257,7 +255,7 @@ export default function App() {
                     ctx.close().catch(() => {});
                   }
                 };
-                setSomExposicaoAtivo(tipo);
+                setSomExposicaoAtivo("emaze");
               }
             } catch (errSynth) {
               console.log("Erro no sintetizador:", errSynth);
@@ -519,7 +517,10 @@ export default function App() {
             {/* SELETOR DE EXPOSIÇÃO (ABAS) */}
             <div className="flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => setAbaMuseu("emaze")}
+                onClick={() => {
+                  pararSomMuseu();
+                  setAbaMuseu("emaze");
+                }}
                 className={`px-5 py-3 rounded-2xl border-2 border-white font-extrabold text-sm md:text-base transition cursor-pointer flex items-center gap-2 shadow-md ${
                   abaMuseu === "emaze"
                     ? "bg-[#ffde59] text-[#001858] scale-102 shadow-amber-500/30"
@@ -530,7 +531,10 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => setAbaMuseu("arts")}
+                onClick={() => {
+                  pararSomMuseu();
+                  setAbaMuseu("arts");
+                }}
                 className={`px-5 py-3 rounded-2xl border-2 border-white font-extrabold text-sm md:text-base transition cursor-pointer flex items-center gap-2 shadow-md ${
                   abaMuseu === "arts"
                     ? "bg-[#ffde59] text-[#001858] scale-102 shadow-amber-500/30"
@@ -554,7 +558,7 @@ export default function App() {
                     </div>
 
                     <button
-                      onClick={() => alternarSomExposicao("emaze")}
+                      onClick={alternarSomPortinari}
                       className={`px-4 py-2.5 rounded-xl border-2 border-white font-extrabold text-sm flex items-center gap-2 shadow-md transition cursor-pointer ${
                         somExposicaoAtivo === "emaze"
                           ? "bg-[#ffde59] text-[#001858] animate-pulse"
@@ -583,38 +587,21 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  {/* BARRA DE ÁUDIO EXCLUSIVA: FUTURO ANCESTRAL */}
-                  <div className="mb-3 bg-[#133c5e] border-2 border-white/20 p-3 rounded-[24px] flex flex-wrap items-center justify-between gap-3 text-white shadow-md">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">🌿</span>
-                      <span className="font-extrabold text-sm md:text-base">
-                        Exposição Futuro Ancestral
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => alternarSomExposicao("arts")}
-                      className={`px-4 py-2.5 rounded-xl border-2 border-white font-extrabold text-sm flex items-center gap-2 shadow-md transition cursor-pointer ${
-                        somExposicaoAtivo === "arts"
-                          ? "bg-[#ffde59] text-[#001858] animate-pulse"
-                          : "bg-[#72ddf7] hover:bg-[#55cde9] text-[#001858]"
-                      }`}
-                    >
-                      {somExposicaoAtivo === "arts" ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                      {somExposicaoAtivo === "arts" ? "🔇 Pausar Sons da Floresta" : "🔊 Tocar Sons da Floresta"}
-                    </button>
-                  </div>
-
                   <div className="relative w-full h-[55vh] md:h-[70vh] rounded-[30px] overflow-hidden bg-[#0a1f3b] flex items-center justify-center border-2 border-white/15">
                     <iframe 
-                      src="https://app.emaze.com/@ALCRTOFLO/histrias-da-floresta?autoplay&hidebuttons" 
+                      src="https://app.emaze.com/@ALCRTOFLO/histrias-da-floresta" 
                       allowFullScreen
-                      allow="autoplay; fullscreen; clipboard-write"
                       className="absolute inset-0 w-full h-full border-none"
                     />
                   </div>
 
-                  <div className="mt-5 bg-[#fee5b1] border-2 border-white p-4 rounded-[30px] flex items-center justify-center gap-4 text-[#154256] font-bold text-base md:text-lg shadow-md">
+                  <div className="mt-3 flex justify-end px-2">
+                    <a href="https://www.emaze.com" target="_blank" rel="noopener noreferrer" className="inline-block opacity-80 hover:opacity-100 transition">
+                      <img src="https://resources.emaze.com/mypres/css/images/embed.png" alt="Powered by emaze" className="h-4 border-none" />
+                    </a>
+                  </div>
+
+                  <div className="mt-3 bg-[#fee5b1] border-2 border-white p-4 rounded-[30px] flex items-center justify-center gap-4 text-[#154256] font-bold text-base md:text-lg shadow-md">
                     <span className="text-3xl">🌿</span>
                     <p className="text-center font-semibold italic">
                       “Histórias da Floresta & Futuro Ancestral — Arte, natureza e ancestralidade em harmonia.”
