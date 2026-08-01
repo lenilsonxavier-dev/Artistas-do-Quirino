@@ -394,7 +394,7 @@ export default function App() {
             id="splash-video" 
             playsInline 
             preload="none"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-0 ${
+            className={`absolute inset-0 w-full h-full object-contain bg-[#001858] transition-opacity duration-500 z-0 ${
               isPlayingVideo ? "opacity-100" : "opacity-0 pointer-events-none"
             }`}
           >
