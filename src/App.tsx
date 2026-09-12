@@ -19,6 +19,7 @@ import {
 import { desafios, Desafio } from "./data/desafios";
 import { jogosOnlineLista, Jogo } from "./data/jogos";
 import { JogoForca } from "./components/JogoForca";
+import { FaqModal } from "./components/FaqModal";
 
 export default function App() {
   // --- ESTADOS ---
@@ -27,6 +28,7 @@ export default function App() {
   const [loginError, setLoginError] = useState<string>("");
   const [activeScreen, setActiveScreen] = useState<string>("splash"); // "splash" | "home" | "museu" | "mural" | "desafiosArte" | "jogosOnline" | "telaJogo" | "webviewScreen"
   const [abaMuseu, setAbaMuseu] = useState<"emaze" | "arts">("emaze");
+  const [isFaqOpen, setIsFaqOpen] = useState<boolean>(false);
   
   // Controle de áudio e vídeo
   const [isPlayingVideo, setIsPlayingVideo] = useState<boolean>(false);
@@ -482,12 +484,21 @@ export default function App() {
             </button>
           </div>
 
-          <button 
-            className="btn-sair mt-10 hover:brightness-95 hover:scale-102 flex items-center justify-center gap-2" 
-            onClick={handleLogoutFull}
-          >
-            <LogOut size={22} /> Sair do Ateliê
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+            <button 
+              type="button"
+              className="px-5 py-2.5 rounded-2xl bg-white/90 border-2 border-white text-[#001858] font-bold text-sm shadow-md hover:bg-white active:scale-98 transition flex items-center gap-2 cursor-pointer"
+              onClick={() => setIsFaqOpen(true)}
+            >
+              <HelpCircle size={18} className="text-[#001858]" /> Sobre & FAQ
+            </button>
+            <button 
+              className="btn-sair hover:brightness-95 hover:scale-102 flex items-center justify-center gap-2" 
+              onClick={handleLogoutFull}
+            >
+              <LogOut size={20} /> Sair do Ateliê
+            </button>
+          </div>
         </div>
       )}
 
@@ -801,6 +812,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Modal FAQ & Sobre o Projeto */}
+      <FaqModal isOpen={isFaqOpen} onClose={() => setIsFaqOpen(false)} />
 
     </div>
   );

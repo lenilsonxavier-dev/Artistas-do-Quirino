@@ -1,0 +1,24 @@
+{
+  "short_name": "Pequenos Artistas",
+  "name": "Pequenos Artistas do Quirino",
+  "icons": [
+    {
+      "src": "https://i.imgur.com/pdbLEaE.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.imgur.com/pdbLEaE.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#fef6e4",
+  "theme_color": "#001858",
+  "display": "standalone",
+  "orientation": "any",
+  "description": "Espaço virtual de arte e aprendizado para os alunos da EMEIEF Osvaldo Quirino Simões."
+}
