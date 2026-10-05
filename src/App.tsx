@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, KeyboardEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import { 
@@ -23,9 +23,6 @@ import { FaqModal } from "./components/FaqModal";
 
 export default function App() {
   // --- ESTADOS ---
-  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-  const [password, setPassword] = useState<string>("");
-  const [loginError, setLoginError] = useState<string>("");
   const [activeScreen, setActiveScreen] = useState<string>("splash"); // "splash" | "home" | "museu" | "mural" | "desafiosArte" | "jogosOnline" | "telaJogo" | "webviewScreen"
   const [abaMuseu, setAbaMuseu] = useState<"emaze" | "arts">("emaze");
   const [isFaqOpen, setIsFaqOpen] = useState<boolean>(false);
@@ -42,19 +39,6 @@ export default function App() {
   const museuAudioRef = useRef<HTMLAudioElement | null>(null);
   const ambientOscRef = useRef<{ stop: () => void } | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // --- PERSISTÊNCIA E INICIALIZAÇÃO DE SEGURANÇA ---
-  useEffect(() => {
-    try {
-      // Verifica se o aluno já fez login anteriormente neste dispositivo
-      const authed = localStorage.getItem("quirino_auth");
-      if (authed === "true") {
-        setIsAuthorized(true);
-      }
-    } catch (e) {
-      console.warn("localStorage não está acessível:", e);
-    }
-  }, []);
 
   // Controlar o áudio do museu quando sair da tela "museu"
   useEffect(() => {
@@ -73,51 +57,20 @@ export default function App() {
     };
   }, []);
 
-  // --- LÓGICA DE AUTENTICAÇÃO ---
-  const handleLogin = () => {
-    if (password === "246") {
-      setIsAuthorized(true);
-      try {
-        localStorage.setItem("quirino_auth", "true");
-      } catch (e) {
-        console.warn("Não foi possível salvar no localStorage:", e);
-      }
-      setLoginError("");
-    } else {
-      setLoginError("Senha incorreta!");
-    }
-  };
-
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleLogin();
-    }
-  };
-
   const handleLogoutFull = () => {
     Swal.fire({
       title: "Sair do Ateliê? 🎨",
-      text: "Espero que tenha se divertido! Deseja remover o acesso salvo neste dispositivo?",
-      icon: "warning",
+      text: "Espero que tenha se divertido! Deseja voltar para a tela inicial de abertura?",
+      icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#ff6b6b",
       cancelButtonColor: "#ffcc00",
-      confirmButtonText: "Sim, desconectar tudo",
-      cancelButtonText: "Apenas fechar",
+      confirmButtonText: "Sim, voltar ao início",
+      cancelButtonText: "Continuar no Ateliê",
       background: "#fff9e6"
     }).then((result) => {
       if (result.isConfirmed) {
-        try {
-          localStorage.removeItem("quirino_auth");
-        } catch (e) {
-          console.warn("Não foi possível remover do localStorage:", e);
-        }
-        setIsAuthorized(false);
-        setPassword("");
         setActiveScreen("splash");
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        // Apenas recarrega a página ou limpa estados, dependendo da plataforma
-        window.location.reload();
       }
     });
   };
@@ -346,46 +299,8 @@ export default function App() {
   return (
     <div className="min-h-screen text-[#001858] selection:bg-[#ffde59] selection:text-[#001858]">
       
-      {/* 🔐 TELA DE LOGIN (SOBREPOSTA SE NÃO AUTORIZADO) */}
-      {!isAuthorized && (
-        <div 
-          id="login" 
-          className="fixed inset-0 bg-gradient-to-br from-[#00ca85] to-[#0099cc] flex flex-col justify-center items-center z-[99999] text-white p-6"
-        >
-          <div className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 w-full max-w-md shadow-2xl text-center">
-            <h1 className="text-3xl font-bold mb-2">🎨 Pequenos Artistas do Quirino</h1>
-            <p className="text-lg opacity-90 mb-6">🔐 Acesso restrito</p>
-
-            <div className="space-y-4">
-              <input 
-                type="password" 
-                id="senha" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder="Digite a senha"
-                className="w-full p-4 text-center text-xl text-[#001858] bg-white rounded-2xl border-none outline-none focus:ring-4 focus:ring-[#ffcc00] placeholder:text-gray-400 font-sans shadow-inner"
-              />
-
-              <button 
-                onClick={handleLogin}
-                className="w-full py-4 text-xl font-bold rounded-2xl bg-[#ffcc00] text-[#001858] hover:bg-[#ffe066] hover:scale-102 active:scale-98 transition shadow-[0_5px_0_#b38f00] cursor-pointer"
-              >
-                Entrar 🎨
-              </button>
-
-              {loginError && (
-                <p id="erro" className="text-[#ffdddd] font-semibold text-sm animate-bounce">
-                  {loginError}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ========== TELA DE ABERTURA / SPLASH ========== */}
-      {isAuthorized && activeScreen === "splash" && (
+      {activeScreen === "splash" && (
         <div 
           id="splash" 
           className="fixed inset-0 bg-gradient-to-br from-[#00ca85] to-[#0099cc] flex flex-col justify-center items-center z-[9999] overflow-hidden"
@@ -441,7 +356,7 @@ export default function App() {
       )}
 
       {/* ========== MENU PRINCIPAL ========== */}
-      {isAuthorized && activeScreen === "home" && (
+      {activeScreen === "home" && (
         <div id="home" className="container mx-auto max-w-md px-6 py-12 flex flex-col items-center min-h-screen justify-center space-y-6">
           <h1 className="text-3xl font-extrabold text-[#001858] drop-shadow-sm mb-4">
             🎨 Pequenos Artistas do Quirino
@@ -503,7 +418,7 @@ export default function App() {
       )}
 
       {/* ========== MUSEU VIRTUAL (LAZY LOAD PARA EVITAR LENTIDÃO NA REDE) ========== */}
-      {isAuthorized && activeScreen === "museu" && (
+      {activeScreen === "museu" && (
         <div id="museu" className="px-4 py-8 md:px-8 max-w-6xl mx-auto">
           <div className="bg-white/90 backdrop-blur border-4 border-white rounded-[40px] md:rounded-[60px] p-6 shadow-xl space-y-6">
             
@@ -627,7 +542,7 @@ export default function App() {
       )}
 
       {/* ========== MURAL VIRTUAL (LAZY LOAD DO PADLET) ========== */}
-      {isAuthorized && activeScreen === "mural" && (
+      {activeScreen === "mural" && (
         <div id="mural" className="fixed inset-0 flex flex-col bg-[#001858]">
           <div className="h-16 bg-[#001858] flex justify-between items-center px-6 border-b-2 border-[#ffcc00] shadow-md z-10">
             <h2 className="text-white font-bold text-lg">🖼️ Mural Virtual: Artistas do Quirino</h2>
@@ -652,7 +567,7 @@ export default function App() {
       )}
 
       {/* ========== DESAFIOS DE ARTE ========== */}
-      {isAuthorized && activeScreen === "desafiosArte" && (
+      {activeScreen === "desafiosArte" && (
         <div id="desafiosArte" className="px-4 py-8 max-w-4xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <button 
@@ -732,7 +647,7 @@ export default function App() {
       )}
 
       {/* ========== CENTRAL DE JOGOS ========== */}
-      {isAuthorized && activeScreen === "jogosOnline" && (
+      {activeScreen === "jogosOnline" && (
         <div id="jogosOnline" className="container mx-auto max-w-md px-6 py-12 flex flex-col items-center min-h-screen justify-center space-y-6">
           <h2 className="text-3xl font-extrabold text-[#001858] drop-shadow-sm mb-4">
             🎮 Central de Jogos
@@ -760,12 +675,12 @@ export default function App() {
       )}
 
       {/* ========== TELA JOGO DA FORCA NATIVO ========== */}
-      {isAuthorized && activeScreen === "jogoForca" && (
+      {activeScreen === "jogoForca" && (
         <JogoForca onVoltar={() => setActiveScreen("jogosOnline")} />
       )}
 
       {/* ========== TELA JOGO (LAZY LOAD IFRAME DETALHADO E FULLSCREEN PARA CELULAR) ========== */}
-      {isAuthorized && activeScreen === "telaJogo" && (
+      {activeScreen === "telaJogo" && (
         <div id="telaJogo" className="fixed inset-0 bg-black z-[9999]">
           {/* Botão flutuante redondo para voltar super otimizado para celulares */}
           <button 
@@ -790,7 +705,7 @@ export default function App() {
       )}
 
       {/* ========== TELA WEBVIEW PORTINARI (LAZY LOAD IFRAME) ========== */}
-      {isAuthorized && activeScreen === "webviewScreen" && (
+      {activeScreen === "webviewScreen" && (
         <div id="webviewScreen" className="fixed inset-0 bg-white z-[9990]">
           {/* Botão flutuante redondo para voltar, sem ocupar espaço de barra */}
           <button 
